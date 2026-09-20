@@ -1,0 +1,8 @@
+{
+  "name": "Display Cell Pros Diagnostic Hub",
+  "description": "Full-stack application and diagnostic hub for Display Cell Pros",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

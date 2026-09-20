@@ -1,0 +1,13 @@
+- [x] Install AWS CLI v2
+- [x] Configure AWS Region (`us-east-1`)
+- [x] Setup Agent Toolkit
+- [x] Integrate `attachDatabasePool` in `api/lib/db.ts`
+- [x] Verify Installation
+- [x] Update reCAPTCHA Enterprise Keys in environment files
+- [x] Refactor `App.tsx` to use environment variables for reCAPTCHA
+- [x] Update `api/lib/recaptcha.ts` with new secret and Enterprise SDK
+- [x] Optimize `vite.config.ts` for HMR and API proxying
+- [x] Fix Vercel build errors (Middleware and Types)
+- [x] Create `public/sitemap.xml`
+- [x] Create `public/robots.txt`
+- [x] Verify static file serving
