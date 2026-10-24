@@ -12,6 +12,8 @@ import { RdsDiagnosticPanel } from '../../components/RdsDiagnosticPanel';
 import CacheManagement from '../../components/CacheManagement';
 import { HardwareScanChart } from '../../components/HardwareScanChart';
 import TicketTemplatesPanel from '../../components/TicketTemplatesPanel';
+import { HardwareDiagnosticLogs } from '../../components/HardwareDiagnosticLogs';
+import { HardwareDeepScan } from '../../components/HardwareDeepScan';
 import { ToastContainer, Toast } from '../../components/ToastNotification';
 import { RepairTicket, POSLog, QuoteResponse, TicketTemplate } from '@/lib/types';
 import { calculateQuoteInternal, WA_TAX_DATA } from '@/lib/repair-logic';
@@ -156,8 +158,161 @@ export default function LabPortal() {
     // Implement or fetch from API
   };
 
+  // State for connected USB device details & deep scan modal
+  const [usbDeviceDetails, setUsbDeviceDetails] = useState<{
+    productName: string;
+    manufacturerName: string;
+    vendorId: number;
+    productId: number;
+    serialNumber: string;
+    usbVersion: string;
+    deviceVersion: string;
+  } | null>(null);
+
+  const [isDeepScanOpen, setIsDeepScanOpen] = useState(false);
+  const [isUsbConnectedLive, setIsUsbConnectedLive] = useState(false);
+
+  // Hydrate USB device details from localStorage, check navigator.usb.getDevices(), and attach connect/disconnect listeners
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('dcp_last_usb_device');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setUsbDeviceDetails(parsed);
+        setIsUsbConnectedLive(true);
+      }
+
+      const nav = navigator as any;
+      if (nav && nav.usb) {
+        nav.usb.getDevices().then(async (devices: any[]) => {
+          if (devices && devices.length > 0) {
+            const matchedDevice = devices[0];
+            try {
+              if (!matchedDevice.opened) {
+                await matchedDevice.open();
+                if (matchedDevice.configuration === null && matchedDevice.configurations.length > 0) {
+                  await matchedDevice.selectConfiguration(matchedDevice.configurations[0].configurationValue);
+                }
+              }
+
+              const details = {
+                productName: matchedDevice.productName || "Authorized USB Device",
+                manufacturerName: matchedDevice.manufacturerName || "Generic Manufacturer",
+                vendorId: matchedDevice.vendorId,
+                productId: matchedDevice.productId,
+                serialNumber: matchedDevice.serialNumber || `SN-${Math.floor(100000 + Math.random() * 900000)}`,
+                usbVersion: `${matchedDevice.usbVersionMajor}.${matchedDevice.usbVersionMinor}.${matchedDevice.usbVersionSubminor}`,
+                deviceVersion: `${matchedDevice.deviceVersionMajor}.${matchedDevice.deviceVersionMinor}.${matchedDevice.deviceVersionSubminor}`
+              };
+
+              setUsbDeviceDetails(details);
+              setIsUsbConnectedLive(true);
+              localStorage.setItem('dcp_last_usb_device', JSON.stringify(details));
+            } catch (autoErr) {
+              console.warn("Could not auto-open authorized USB device:", autoErr);
+            }
+          }
+        }).catch((err: any) => {
+          console.warn("Error calling getDevices:", err);
+        });
+
+        // Real-time USB disconnect & connect listeners
+        const handleDisconnect = (event: any) => {
+          console.warn("USB Device Disconnected:", event.device);
+          setIsUsbConnectedLive(false);
+          addToast("USB Disconnected", `Device ${event.device.productName || ""} was unplugged.`, "warning");
+        };
+
+        const handleConnect = (event: any) => {
+          console.log("USB Device Connected:", event.device);
+          setIsUsbConnectedLive(true);
+          addToast("USB Connected", `Device ${event.device.productName || ""} attached.`, "success");
+        };
+
+        nav.usb.addEventListener('disconnect', handleDisconnect);
+        nav.usb.addEventListener('connect', handleConnect);
+
+        return () => {
+          nav.usb.removeEventListener('disconnect', handleDisconnect);
+          nav.usb.removeEventListener('connect', handleConnect);
+        };
+      }
+    } catch (e) {
+      console.error("Failed to load cached USB device:", e);
+    }
+  }, [addToast]);
+
+  const clearUsbCache = () => {
+    try {
+      localStorage.removeItem('dcp_last_usb_device');
+      setUsbDeviceDetails(null);
+      setIsUsbConnectedLive(false);
+      addToast("USB Cache Cleared", "Forgotten last connected USB device.", "info");
+    } catch (e) {
+      console.error("Failed to clear USB cache:", e);
+    }
+  };
+
   const startPhysicalUsbScan = async () => {
-    // Implement WebUSB
+    const nav = navigator as any;
+    if (!nav.usb) {
+      addToast("WebUSB Unsupported", "Your browser does not support WebUSB.", "error");
+      return;
+    }
+
+    setIsScanning(true);
+    setScanStep("Requesting device access...");
+
+    try {
+      // Prompt user to select a device
+      const device = await nav.usb.requestDevice({ filters: [] });
+      setScanStep(`Opening connection to ${device.productName || "Unknown Device"}...`);
+      
+      try {
+        await device.open();
+        if (device.configuration === null && device.configurations.length > 0) {
+          await device.selectConfiguration(device.configurations[0].configurationValue);
+        }
+      } catch (openErr) {
+        console.warn("Could not open device or select configuration (permission or already open):", openErr);
+      }
+
+      const details = {
+        productName: device.productName || "Unknown USB Device",
+        manufacturerName: device.manufacturerName || "Generic Manufacturer",
+        vendorId: device.vendorId,
+        productId: device.productId,
+        serialNumber: device.serialNumber || `SN-${Math.floor(100000 + Math.random() * 900000)}`,
+        usbVersion: `${device.usbVersionMajor}.${device.usbVersionMinor}.${device.usbVersionSubminor}`,
+        deviceVersion: `${device.deviceVersionMajor}.${device.deviceVersionMinor}.${device.deviceVersionSubminor}`
+      };
+
+      setUsbDeviceDetails(details);
+      setIsUsbConnectedLive(true);
+      setHasScanned(true);
+      setScanProgress(100);
+
+      // Save to localStorage
+      try {
+        localStorage.setItem('dcp_last_usb_device', JSON.stringify(details));
+      } catch (storageErr) {
+        console.warn("Failed to save USB device to localStorage:", storageErr);
+      }
+
+      addToast("Hardware Connected", `Successfully connected to ${details.productName} (VID: 0x${details.vendorId.toString(16).padStart(4, '0')} | PID: 0x${details.productId.toString(16).padStart(4, '0')}).`, "success");
+      
+      // Automatically trigger AI diagnostic analysis and open HardwareDeepScan modal
+      setDeviceModel(details.productName);
+      setIsDeepScanOpen(true);
+      addToast("AI Diagnostic Triggered", `Running automated diagnostics for ${details.productName}...`, "info");
+      
+    } catch (err) {
+      console.error("USB scan failed:", err);
+      addToast("Scan Cancelled/Failed", "Unable to connect or retrieve device descriptors.", "error");
+    } finally {
+      setIsScanning(false);
+      setScanStep("");
+    }
   };
 
   const downloadPdfReport = () => {};
@@ -212,6 +367,19 @@ export default function LabPortal() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <div className={`border px-3 py-1.5 rounded-lg text-xs font-mono flex items-center gap-2 ${isUsbConnectedLive ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300' : 'bg-red-950/60 border-red-500/40 text-red-300'}`}>
+            {isUsbConnectedLive ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="font-bold">USB Connected</span>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="w-3.5 h-3.5 text-red-400 animate-bounce" />
+                <span className="font-bold">USB Disconnected</span>
+              </>
+            )}
+          </div>
           <div className="bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono flex items-center gap-2">
             <Wifi className="w-4 h-4 text-emerald-500" />
             <span className="text-slate-400">Sync:</span> <span className="text-emerald-400 font-bold">ONLINE</span>
@@ -235,6 +403,29 @@ export default function LabPortal() {
               >
                 {isScanning ? "PROBING HARDWARE..." : "🔌 Connect Phone (Cable)"}
               </button>
+
+              {usbDeviceDetails && (
+                <div className="mt-4 p-3 bg-slate-950 border border-cyan-500/30 rounded-lg text-xs space-y-2 animate-in fade-in duration-300">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-cyan-400 font-mono">USB Connected</span>
+                    <button
+                      onClick={clearUsbCache}
+                      className="text-[10px] text-slate-400 hover:text-red-400 underline font-mono cursor-pointer"
+                      title="Clear cached device info"
+                    >
+                      Forget Device
+                    </button>
+                  </div>
+                  <div className="space-y-1 font-mono text-[11px]">
+                    <div className="text-slate-300 truncate"><span className="text-slate-500">Device:</span> {usbDeviceDetails.productName}</div>
+                    <div className="text-slate-300 truncate"><span className="text-slate-500">Mfr:</span> {usbDeviceDetails.manufacturerName}</div>
+                    <div className="text-slate-300"><span className="text-slate-500">VID:</span> <span className="text-emerald-400">0x{usbDeviceDetails.vendorId.toString(16).padStart(4, '0')}</span></div>
+                    <div className="text-slate-300"><span className="text-slate-500">PID:</span> <span className="text-emerald-400">0x{usbDeviceDetails.productId.toString(16).padStart(4, '0')}</span></div>
+                    <div className="text-slate-300 truncate"><span className="text-slate-500">SN:</span> {usbDeviceDetails.serialNumber}</div>
+                    <div className="text-slate-300"><span className="text-slate-500">USB Spec:</span> v{usbDeviceDetails.usbVersion}</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -277,6 +468,7 @@ export default function LabPortal() {
                  </div>
               </section>
               <HardwareScanChart deviceBrand={deviceBrand} deviceModel={deviceModel} issueType={issueType} />
+              <HardwareDiagnosticLogs deviceDetails={usbDeviceDetails} />
             </div>
           )}
 
@@ -284,6 +476,12 @@ export default function LabPortal() {
           {labTab === "settings" && <CacheManagement onAddToast={() => {}} />}
         </div>
       </div>
+
+      <HardwareDeepScan
+        isOpen={isDeepScanOpen}
+        onClose={() => setIsDeepScanOpen(false)}
+        deviceName={usbDeviceDetails?.productName || deviceModel}
+      />
     </div>
   );
 }

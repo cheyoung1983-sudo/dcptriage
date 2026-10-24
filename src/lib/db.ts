@@ -30,7 +30,7 @@ export const pool = new Pool({
   port: Number(process.env.PGPORT),
   // Recommended to switch to `true` in production.
   // See https://docs.aws.amazon.com/lambda/latest/dg/services-rds.html#rds-lambda-certificates
-  ssl: { rejectUnauthorized: false },
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : { rejectUnauthorized: false },
   max: 20,
 });
 attachDatabasePool(pool);

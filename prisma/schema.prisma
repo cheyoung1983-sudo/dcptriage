@@ -44,6 +44,7 @@ model User {
 
   accounts Account[]
   sessions Session[]
+  tickets  Ticket[]
 }
 
 model VerificationToken {
@@ -53,3 +54,28 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+model Ticket {
+  id           String   @id
+  customerName String
+  device       String
+  issueType    String
+  status       String   @default("open")
+  quotedPrice  Float
+  tax          Float
+  discount     Float    @default(0.0)
+  total        Float
+  userId       Int?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model POSLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  details   String?  @db.Text
+  amount    Float?
+  createdAt DateTime @default(now())
+}
+

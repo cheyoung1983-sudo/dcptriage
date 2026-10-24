@@ -16,12 +16,12 @@ const authOptions = {
         const now = Math.floor(Date.now() / 1000);
         const expiresAt = now + ((tokenResponse as any).expires_in ?? 0);
         return tokenResponse
-          ? { id: "vercel-user",
+          ? ({ id: "vercel-user",
               name: "VercelUser",
-              // accessToken: (tokenResponse as any).access_token,
-              // refreshToken: (tokenResponse as any).refresh_token,
-              // accessTokenExpires: expiresAt,
-            }
+              accessToken: (tokenResponse as any).access_token,
+              refreshToken: (tokenResponse as any).refresh_token,
+              accessTokenExpires: expiresAt,
+            } as any)
           : null;
       },
     }),
