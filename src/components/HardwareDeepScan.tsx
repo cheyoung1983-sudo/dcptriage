@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Loader2, ShieldCheck, X } from 'lucide-react';
+import { playSuccessChime, playWarningTone } from '@/lib/audio';
 
 interface HardwareDeepScanProps {
   isOpen: boolean;
@@ -41,6 +42,15 @@ export function HardwareDeepScan({ isOpen, onClose, deviceName }: HardwareDeepSc
           next[step] = progress;
           return next;
         });
+
+        if (progress === 100) {
+          // Play success chime or occasional warning tone test
+          if (step === 2 && Math.random() < 0.2) {
+            playWarningTone();
+          } else {
+            playSuccessChime();
+          }
+        }
       } else {
         if (step < steps.length - 1) {
           step++;

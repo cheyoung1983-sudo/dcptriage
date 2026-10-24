@@ -171,6 +171,32 @@ export default function LabPortal() {
 
   const [isDeepScanOpen, setIsDeepScanOpen] = useState(false);
   const [isUsbConnectedLive, setIsUsbConnectedLive] = useState(false);
+  const [isBulkDiagnosticsEnabled, setIsBulkDiagnosticsEnabled] = useState(false);
+  const [bulkQueue, setBulkQueue] = useState<string[]>([]);
+
+  const startBulkDiagnostics = async () => {
+    const nav = navigator as any;
+    if (!nav.usb) {
+      addToast("WebUSB Unsupported", "Your browser does not support WebUSB.", "error");
+      return;
+    }
+
+    try {
+      const devices = await nav.usb.getDevices();
+      if (!devices || devices.length === 0) {
+        addToast("No Bulk Devices", "No previously authorized devices found for bulk scan. Connect a device first.", "warning");
+        return;
+      }
+
+      const names = devices.map((d: any) => d.productName || "Generic USB Device");
+      setBulkQueue(names);
+      setIsDeepScanOpen(true);
+      addToast("Bulk Diagnostics Started", `Sequencing deep scan across ${devices.length} authorized devices.`, "info");
+    } catch (e) {
+      console.error("Bulk scan error:", e);
+      addToast("Bulk Scan Failed", "Unable to enumerate devices.", "error");
+    }
+  };
 
   // Hydrate USB device details from localStorage, check navigator.usb.getDevices(), and attach connect/disconnect listeners
   useEffect(() => {
@@ -387,6 +413,17 @@ export default function LabPortal() {
           <div className="bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono flex items-center gap-3">
             <span className="text-slate-400">Latency:</span> <span className="text-blue-400 font-bold">12ms</span>
           </div>
+          <button
+            onClick={() => {
+              const next = !isBulkDiagnosticsEnabled;
+              setIsBulkDiagnosticsEnabled(next);
+              if (next) startBulkDiagnostics();
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-all border flex items-center gap-2 ${isBulkDiagnosticsEnabled ? 'bg-cyan-600 text-white border-cyan-500 shadow-lg' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750'}`}
+          >
+            <Cpu size={14} className={isBulkDiagnosticsEnabled ? 'animate-spin' : ''} />
+            Bulk Diagnostics: {isBulkDiagnosticsEnabled ? 'ON' : 'OFF'}
+          </button>
         </div>
       </div>
 
