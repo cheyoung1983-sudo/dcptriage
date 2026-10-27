@@ -22,11 +22,18 @@ export function Footer() {
             </div>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white tracking-wider uppercase mb-4 font-mono">Contact</h3>
+            <h3 className="text-sm font-semibold text-white tracking-wider uppercase mb-4 font-mono">Location & Intake</h3>
             <ul className="space-y-2 text-sm text-slate-400">
               <li className="flex items-center gap-2"><Phone size={14}/> 509-903-6139</li>
-              <li className="flex items-center gap-2"><MapPin size={14}/> Mobile Service: Spokane & Valley</li>
-              <li className="flex items-center gap-2"><Clock size={14}/> Mon-Sat: 8am - 6pm</li>
+              <li className="flex items-start gap-2">
+                <MapPin size={14} className="shrink-0 mt-1 text-cyan-400" />
+                <span>PO Box 1308 6325 N Monroe St. Spokane, WA 99208</span>
+              </li>
+              <li className="flex items-center gap-2 text-amber-300">
+                <Clock size={14} className="shrink-0 text-amber-400" />
+                <span>Soft Ops: Wed–Fri 10am – 4pm</span>
+              </li>
+              <li className="text-xs text-emerald-400 font-mono">24/7 Lockbox Drop-Off Active</li>
             </ul>
           </div>
           <div>

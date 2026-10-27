@@ -5,7 +5,7 @@ import { Van, Box, ChevronRight } from 'lucide-react';
 
 export function Hero({ selectHeroMode, openBookingModal }: { selectHeroMode: (mode: 'onsite' | 'mailin') => void, openBookingModal: (title: string) => void }) {
   return (
-    <section className="relative pt-36 pb-20 md:pt-44 md:pb-28 overflow-hidden bg-slate-950">
+    <section className="relative pt-12 pb-16 md:pt-16 md:pb-24 overflow-hidden bg-slate-950">
       {/* Background Ambient Glow Circles */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-blue-500/15 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="absolute top-1/3 right-10 w-[300px] h-[300px] bg-cyan-500/15 blur-[100px] rounded-full pointer-events-none"></div>
