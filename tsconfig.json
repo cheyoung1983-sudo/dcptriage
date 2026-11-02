@@ -40,7 +40,6 @@
     "src/**/*.tsx",
     "src/globals.d.ts",
     "api",
-    "server.ts",
     "vite.config.ts"
   ],
   "exclude": [
