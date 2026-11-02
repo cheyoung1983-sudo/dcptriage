@@ -1,16 +1,12 @@
-import request from 'supertest';
-import { createServer } from 'http';
-import { handler } from '@/app/api/auth/signin/route'; // adjust import if needed
+/** @jest-environment node */
+import { GET } from '@/app/api/auth/signin/route';
 
 describe('Auth SignIn API', () => {
-  let server: any;
-  beforeAll(() => {
-    server = createServer(handler);
-  });
-
   it('should redirect to Vercel OAuth URL', async () => {
-    const res = await request(server).get('/api/auth/signin');
-    expect(res.status).toBe(302);
-    expect(res.headers.location).toContain('https://vercel.com/oauth/authorize');
+    process.env.VERCEL_CLIENT_ID = 'test-client';
+    process.env.VERCEL_OAUTH_REDIRECT_URI = 'http://localhost/api/auth/callback';
+    const res = await GET();
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toContain('https://api.vercel.com/v2/oauth/authorize');
   });
 });
