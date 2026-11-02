@@ -30,9 +30,7 @@ Vercel logs are ephemeral. For production analysis:
 ## 🛡️ Security Best Practices
 
 ### 1. Rate Limiting
-The API is protected by `express-rate-limit`.
-- **Threshold**: 100 requests per 15 minutes per IP.
-- **Adjustment**: If legitimate B2B partners are being blocked, adjust the `limiter` configuration in `server.ts`.
+The legacy Express `server.ts` (and its `express-rate-limit` limiter) was never wired into the Next.js app and has been removed. Rate limiting for API routes is a TODO (see TODO.md).
 
 ### 2. Secret Management
 Never commit `.env` or `.env.local`. 
