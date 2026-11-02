@@ -12,3 +12,8 @@ coverage/
 !.env.example
 *.exe
 .vercel
+
+# secrets & artifacts
+.dev.env.json
+*.tsbuildinfo
+.artifacts/

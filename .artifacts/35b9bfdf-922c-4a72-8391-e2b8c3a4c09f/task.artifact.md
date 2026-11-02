@@ -1,3 +1,0 @@
-- `[ ]` Update `deploy.yml` with secrets validation and optimized Node version.
-- `[ ]` Verify YAML syntax.
-- `[ ]` Create walkthrough.
