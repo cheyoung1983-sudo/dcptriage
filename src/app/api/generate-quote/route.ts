@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     const taxRate = taxInfo.rate;
     const taxCity = taxInfo.city;
 
-    const processTier = (tier: any, tierName: string) => {
+    const processTier = (tier: { subtotal: number }, tierName: string) => {
       let subtotal = tier.subtotal;
       let discountAmount = 0;
 
@@ -38,8 +38,9 @@ export async function POST(req: Request) {
       const calculatedTax = Math.round((subtotalAfterDiscount * taxRate) * 100) / 100;
       const grandTotal = Math.round((subtotalAfterDiscount + calculatedTax) * 100) / 100;
 
+      // Public fields only: never spread internal tier data into the response.
       return {
-        ...tier,
+        subtotal: tier.subtotal,
         discountAmount,
         calculatedTax,
         grandTotal,
