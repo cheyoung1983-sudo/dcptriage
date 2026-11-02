@@ -21,8 +21,6 @@ export interface POSLog {
 }
 
 export interface QuoteTier {
-  partsCost: number;
-  laborCost: number;
   subtotal: number;
   discountAmount: number;
   calculatedTax: number;

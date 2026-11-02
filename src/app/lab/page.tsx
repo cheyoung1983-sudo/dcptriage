@@ -16,7 +16,6 @@ import { HardwareDiagnosticLogs } from '../../components/HardwareDiagnosticLogs'
 import { HardwareDeepScan } from '../../components/HardwareDeepScan';
 import { ToastContainer, Toast } from '../../components/ToastNotification';
 import { RepairTicket, POSLog, QuoteResponse, TicketTemplate } from '@/lib/types';
-import { calculateQuoteInternal, WA_TAX_DATA } from '@/lib/repair-logic';
 
 export default function LabPortal() {
   const auth0User = { name: "Technician", email: "tech@displaycellpros.com", picture: "" };
@@ -54,9 +53,9 @@ export default function LabPortal() {
   const [isCalculatingQuote, setIsCalculatingQuote] = useState(false);
   const [quote, setQuote] = useState<QuoteResponse>({
     tiers: {
-      budget: { partsCost: 45, laborCost: 50, subtotal: 171, discountAmount: 0, calculatedTax: 17.70, grandTotal: 188.70, extras: ["Aftermarket Quality", "90-Day Warranty"] },
-      professional: { partsCost: 95, laborCost: 50, subtotal: 261, discountAmount: 0, calculatedTax: 27.01, grandTotal: 288.01, extras: ["Premium Soft OLED", "Lifetime Warranty", "Free Protective Shield"] },
-      authorized: { partsCost: 180, laborCost: 75, subtotal: 459, discountAmount: 0, calculatedTax: 47.51, grandTotal: 506.51, extras: ["Genuine OEM Parts", "Lifetime Warranty", "Free Protective Shield"] }
+      budget: { subtotal: 210, discountAmount: 0, calculatedTax: 21.73, grandTotal: 231.73, extras: ["Aftermarket Quality", "90-Day Warranty"] },
+      professional: { subtotal: 327, discountAmount: 0, calculatedTax: 33.84, grandTotal: 360.84, extras: ["Premium Soft OLED", "Lifetime Warranty", "Free Protective Shield"] },
+      authorized: { subtotal: 471, discountAmount: 0, calculatedTax: 48.75, grandTotal: 519.75, extras: ["Genuine OEM Parts", "Lifetime Warranty", "Free Protective Shield"] }
     },
     taxInfo: { zipCode: "98101", city: "Seattle", rate: 0.1035 },
     discountInfo: { applied: false, percentage: 15, company: "" }
