@@ -1,0 +1,6 @@
+{
+  "summary": "Implementation plan to resolve WebUSB connection failures when ADB is active on Windows, including permissions-policy updates, ADB interface claiming, conflict detection for exclusive ADB locks, and technician troubleshooting guidance.",
+  "updatedAt": "2026-11-03T22:42:36.286391116Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

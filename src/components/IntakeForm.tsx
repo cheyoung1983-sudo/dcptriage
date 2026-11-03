@@ -1331,7 +1331,7 @@ export default function IntakeForm() {
                   >
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{entry.serviceTier}</span>
-                      <span className="text-[10px] text-slate-400">{new Date(entry.date).toLocaleDateString()}</span>
+                      <span className="text-[10px] text-slate-400" suppressHydrationWarning>{new Date(entry.date).toLocaleDateString()}</span>
                     </div>
                     <h4 className="text-sm font-bold text-slate-900 mb-1">{entry.deviceModel}</h4>
                     <p className="text-[10px] font-mono text-slate-500 uppercase mb-3">IMEI: {entry.imei}</p>

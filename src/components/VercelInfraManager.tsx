@@ -326,7 +326,7 @@ export default function VercelInfraManager() {
                         {dep.meta?.githubCommitSha && (
                           <span className="font-mono">{dep.meta.githubCommitSha.substring(0, 7)}</span>
                         )}
-                        <span>{new Date(dep.created).toLocaleString()}</span>
+                        <span suppressHydrationWarning>{new Date(dep.created).toLocaleString()}</span>
                         {dep.creator?.username && (
                           <span>by @{dep.creator.username}</span>
                         )}

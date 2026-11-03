@@ -28,6 +28,7 @@ import { TelemetryProvider, useTelemetry } from '@/lib/TelemetryContext';
 import { HardwareTelemetryDashboard } from './HardwareTelemetryDashboard';
 import GitHubCLISourceCenter from './GitHubCLISourceCenter';
 import { ToastProvider } from './Toast';
+import UsbConnectionStatus from './UsbConnectionStatus';
 
 function WorkstationContent() {
   const {
@@ -70,7 +71,7 @@ function WorkstationContent() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30" suppressHydrationWarning>
       <TelemetryHeader onOpenCli={() => setActiveTab('github_repo')} />
 
       {/* Workstation Navigation Ribbon */}
@@ -106,7 +107,9 @@ function WorkstationContent() {
       </div>
 
       {/* Main Workstation View Area */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <UsbConnectionStatus />
+
         {activeTab === 'dashboard' && (
           <div className="animate-in fade-in duration-200">
             <HardwareTelemetryDashboard />
@@ -240,7 +243,7 @@ function WorkstationContent() {
                 deviceModel={usbDeviceDetails?.productName || "iPhone 14 Pro Max"}
                 serviceTier="Tier 3 (Board Rework)"
                 assignedBin="ESD-VAULT-B14"
-                createdDate={new Date().toLocaleDateString()}
+                createdDate="2026-11-03"
               />
 
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-4 shadow-xl">

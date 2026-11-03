@@ -264,19 +264,19 @@ export default function CompanyBlueprintGovernance() {
                   <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2 font-mono text-xs">
                     <div className="flex justify-between">
                       <span className="text-slate-500">Social Security (x0.124):</span>
-                      <span className="font-bold text-slate-900">${socSecTax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="font-bold text-slate-900">${socSecTax.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500">Medicare (x0.029):</span>
-                      <span className="font-bold text-slate-900">${medicareTax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="font-bold text-slate-900">${medicareTax.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500">Additional Medicare (x0.009):</span>
-                      <span className="font-bold text-slate-900">${addMedicareTax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="font-bold text-slate-900">${addMedicareTax.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="pt-2 border-t border-slate-200 flex justify-between font-sans">
                       <strong className="text-slate-900">Total Form 941 Liability:</strong>
-                      <strong className="text-blue-600 text-sm font-mono">${totalForm941Liability.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                      <strong className="text-blue-600 text-sm font-mono">${totalForm941Liability.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                     </div>
                   </div>
                 </div>
@@ -363,11 +363,11 @@ export default function CompanyBlueprintGovernance() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">Immediate Year 1 Expense:</span>
-                      <span className="font-bold text-emerald-400">${immediateWriteOff.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="font-bold text-emerald-400">${immediateWriteOff.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">Est. Income Tax Savings (21%):</span>
-                      <span className="font-bold text-blue-300">${taxSavingsEst.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="font-bold text-blue-300">${taxSavingsEst.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                     </div>
                   </div>
                 </div>

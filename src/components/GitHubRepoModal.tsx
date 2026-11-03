@@ -504,7 +504,7 @@ export default function GitHubRepoModal({ isOpen, onClose, onOpenCli }: GitHubRe
                             <div className="text-[11px] text-slate-500 flex items-center gap-2">
                               <span className="text-slate-400">{c.commit?.author?.name || 'Author'}</span>
                               <span>•</span>
-                              <span>{new Date(c.commit?.author?.date || Date.now()).toLocaleDateString()}</span>
+                              <span suppressHydrationWarning>{new Date(c.commit?.author?.date || Date.now()).toLocaleDateString()}</span>
                             </div>
                           </div>
                           <a

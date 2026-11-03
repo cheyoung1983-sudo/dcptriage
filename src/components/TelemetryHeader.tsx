@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Cpu, AlertCircle, Zap, RefreshCw, Usb, ShieldCheck, AlertTriangle, FolderGit2, GitBranch } from 'lucide-react';
+import { Cpu, AlertCircle, Zap, RefreshCw, Usb, ShieldCheck, AlertTriangle, FolderGit2, GitBranch, Copy, Check, Terminal, X } from 'lucide-react';
 import { useTelemetry } from '@/lib/TelemetryContext';
 import GitHubRepoModal from './GitHubRepoModal';
 
 export function TelemetryHeader({ onOpenCli }: { onOpenCli?: () => void }) {
   const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
   const [gitHubStatus, setGitHubStatus] = useState<{ configured: boolean; repo?: string; username?: string } | null>(null);
+  const [copiedAdbCmd, setCopiedAdbCmd] = useState(false);
 
   const fetchGitHubStatus = () => {
     fetch('/api/github/status')
@@ -33,16 +34,91 @@ export function TelemetryHeader({ onOpenCli }: { onOpenCli?: () => void }) {
     connectUsb,
     isScanning,
     disconnectUsb,
-    isDisconnectedUnexpectedly
+    isDisconnectedUnexpectedly,
+    isAdbLocked,
+    usbErrorMessage,
+    resetAdbLock
   } = useTelemetry();
+
+  const handleCopyAdbCommand = () => {
+    navigator.clipboard.writeText('adb kill-server');
+    setCopiedAdbCmd(true);
+    setTimeout(() => setCopiedAdbCmd(false), 2500);
+  };
 
   const [isBulkEnabled, setIsBulkEnabled] = React.useState(false);
   const onToggleBulk = () => setIsBulkEnabled(!isBulkEnabled);
 
   return (
     <header className="sticky top-0 z-50 w-full bg-slate-950/95 border-b border-cyan-500/30 backdrop-blur-md shadow-2xl transition-all">
+      {/* ADB Daemon Lock Conflict Banner */}
+      {isAdbLocked && (
+        <div className="bg-gradient-to-r from-rose-950/90 via-amber-950/80 to-slate-950 border-b border-rose-500/40 px-4 py-3 text-rose-200 text-xs font-mono shadow-lg transition-all animate-in fade-in duration-200">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="p-1.5 rounded-lg bg-rose-500/20 text-rose-400 shrink-0">
+                <Terminal size={18} className="animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-rose-100 uppercase tracking-wide text-[12px]">
+                    Windows ADB Daemon Lock Detected
+                  </span>
+                  <span className="text-[10px] bg-rose-900/60 text-rose-300 px-1.5 py-0.5 rounded border border-rose-600/40 font-semibold">
+                    EXCLUSIVE PORT 5037
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-300 font-sans mt-0.5 max-w-2xl">
+                  {usbErrorMessage || "The Windows ADB server (`adb.exe`) is holding an exclusive USB interface lock. Run `adb kill-server` in Windows Terminal / CMD to release the interface, then click Reconnect."}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 w-full md:w-auto justify-end">
+              <button
+                onClick={handleCopyAdbCommand}
+                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 hover:border-slate-500 rounded-lg text-xs font-mono flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                title="Copy command to clipboard"
+              >
+                {copiedAdbCmd ? (
+                  <>
+                    <Check size={14} className="text-emerald-400" />
+                    <span className="text-emerald-400 font-bold">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={13} className="text-cyan-400" />
+                    <span className="text-cyan-300 font-bold">adb kill-server</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  resetAdbLock();
+                  connectUsb();
+                }}
+                disabled={isScanning}
+                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg uppercase tracking-wider text-xs transition-all shadow-md flex items-center gap-1.5 shrink-0 active:scale-95 disabled:opacity-50"
+              >
+                <Usb size={13} className={isScanning ? 'animate-spin' : ''} />
+                <span>{isScanning ? 'Connecting...' : 'Reconnect USB'}</span>
+              </button>
+
+              <button
+                onClick={resetAdbLock}
+                className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg transition-colors"
+                title="Dismiss warning"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hardware Error Recovery Banner */}
-      {isDisconnectedUnexpectedly && !isUsbConnected && (
+      {isDisconnectedUnexpectedly && !isUsbConnected && !isAdbLocked && (
         <div className="bg-amber-500/20 border-b border-amber-500/50 px-4 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-3 text-amber-200 text-xs font-mono">
           <div className="flex items-center gap-2.5">
             <AlertTriangle size={18} className="text-amber-400 animate-bounce shrink-0" />

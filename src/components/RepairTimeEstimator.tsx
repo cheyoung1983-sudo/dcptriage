@@ -360,7 +360,7 @@ export default function RepairTimeEstimator({ onApplyEstimate }: RepairTimeEstim
                 <Sparkles className="w-3.5 h-3.5 text-blue-400" />
                 Estimated Ready-For-Pick-Up Target
               </span>
-              <p className="text-base font-extrabold text-white">
+              <p className="text-base font-extrabold text-white" suppressHydrationWarning>
                 {formattedCompletionWindow}
               </p>
               <p className="text-[11px] text-slate-400">

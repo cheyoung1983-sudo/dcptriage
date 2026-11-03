@@ -34,6 +34,10 @@ export interface UsbDeviceDetails {
   serialNumber: string;
   usbVersion: string;
   deviceVersion: string;
+  adbClaimed?: boolean;
+  interfaceNumber?: number;
+  endpointsCount?: number;
+  isAndroidAdb?: boolean;
 }
 
 export interface CapturedPhoto {

@@ -102,7 +102,7 @@ export default function WarrantyTrackerCard({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative z-10">
         <div className="bg-slate-800/60 border border-slate-700/80 p-4 rounded-2xl space-y-1">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Completion Date</span>
-          <span className="text-base font-black text-white flex items-center gap-1.5">
+          <span className="text-base font-black text-white flex items-center gap-1.5" suppressHydrationWarning>
             <Calendar className="w-4 h-4 text-blue-400 shrink-0" />
             {effectiveStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
@@ -110,7 +110,7 @@ export default function WarrantyTrackerCard({
 
         <div className="bg-slate-800/60 border border-slate-700/80 p-4 rounded-2xl space-y-1">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Expiration Date</span>
-          <span className="text-base font-black text-white flex items-center gap-1.5">
+          <span className="text-base font-black text-white flex items-center gap-1.5" suppressHydrationWarning>
             <Calendar className="w-4 h-4 text-emerald-400 shrink-0" />
             {expiryDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
