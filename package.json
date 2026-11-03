@@ -7,7 +7,7 @@
     "node": ">=22.x"
   },
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev -p 3000 -H 0.0.0.0",
     "build": "prisma generate && node scripts/patch-next.cjs && next build && node scripts/patch-next.cjs",
     "postinstall": "prisma generate && node scripts/patch-next.cjs",
     "start": "next start",
