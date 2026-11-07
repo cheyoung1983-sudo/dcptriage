@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { exchangeCodeForToken, refreshVercelToken } from "@/lib/vercelAuth";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import prisma from "@/lib/prisma";
+import { isDbConfigured } from "@/lib/db";
 
 const authOptions = {
   providers: [
@@ -61,7 +62,7 @@ const authOptions = {
       return session;
     },
   },
-  adapter: PrismaAdapter(prisma),
+  adapter: isDbConfigured() ? PrismaAdapter(prisma) : undefined,
   secret: process.env.AUTH_SECRET,
   session: { strategy: "jwt" as const, maxAge: 30 * 24 * 60 * 60 },
   cookies: {

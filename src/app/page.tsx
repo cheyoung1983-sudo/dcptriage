@@ -1,6 +1,5 @@
-import { NewHome } from "@/components/new_design/NewHome";
+import { DiagnosticsWorkstation } from "@/components/DiagnosticsWorkstation";
 
 export default function Home() {
-  return <NewHome />;
+  return <DiagnosticsWorkstation />;
 }
-
