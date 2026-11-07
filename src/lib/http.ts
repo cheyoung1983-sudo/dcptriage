@@ -60,7 +60,7 @@ async function readLimited(req: Request): Promise<{ ok: true; text: string } | {
 
 export async function readJson(req: Request): Promise<{ ok: true; data: unknown } | { ok: false; response: NextResponse }> {
   const body = await readLimited(req)
-  if (!body.ok) return body
+  if ('response' in body) return { ok: false, response: body.response }
   try {
     return { ok: true, data: body.text ? JSON.parse(body.text) : {} }
   } catch {
@@ -74,7 +74,7 @@ export function agentTool(run: (input: unknown, ctx: ToolContext) => Promise<Too
     const denied = guard(req)
     if (denied) return denied
     const body = await readJson(req)
-    if (!body.ok) return body.response
+    if ('response' in body) return body.response
     return toResponse(await run(body.data, { clientIp: getClientIp(req.headers) }))
   }
 }

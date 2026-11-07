@@ -1,0 +1,385 @@
+﻿Triage AI – Consolidated Build Reference (Oct 2026)
+Owner: Ryan Young, Display & Cell Pros LLC (veteran-owned phone/display repair, Spokane, WA) For: Ryan, building the Triage AI app at triage.displaycellpros.com (repo dcp-triage, PR #1, Vercel) Prepared: Oct 14, 2026. This doc pulls together a read-only search of Ryan's Google Drive and a GitHub code search. No source files were changed. Quoted text is copied from the sources. Anything marked "not read" was found but not opened.
+Overview
+Triage AI takes in a customer's description of a device problem, sorts the job into a tier, and does one of two things. For routine repairs (Tier 1 and Tier 2) it gives a quote using the V4 pricing formula: part cost × 1.8 + $75 labor, plus a $25 trip fee for mobile jobs. For board-level work (Tier 3) it hands the job to Ryan without a firm quote. On the bench side, the Rev 4 design adds schematic and boardview checking and a Chain-of-Verification (CoVe) step, so the system refuses to answer rather than guess at a pinout. The voice and chat intake runs on an ElevenLabs agent ("Virtual Ryan"). The best existing dashboard code is in the refactored website repo on branch fb. Many sources still use older pricing ($50/hr or $85/hr). Treat those as replaced by V4 (see "Conflicts and gaps").
+
+
+________________
+
+
+1. CAD / schematic checking
+Key specs
+
+
+* Motherboard schematics and boardview files (.brd, .fz, .cad) are converted to SVG. The SVG has separate layers for traces, components, and nets (layer-traces, layer-components, layer-nets).
+* Each pad is tagged with its part, pin, and net, for example data-ref="U7100" data-pin="24" data-net="PPBUS_G3H".
+* Diode-mode readings are colored by how far they drift from the expected value:
+   * Green (normal): ΔV_rel ≤ 0.05
+   * Amber (drift/degraded): 0.05 < ΔV_rel ≤ 0.15
+   * Red (short to ground or open circuit): ΔV_rel > 0.15, or V_meas ≤ 0.005 V
+* Every net name the system shows must exist in the active board's verified netlist database.
+* Before checking, the system asks the technician to confirm the board revision from the physical 820-series PCB silk-screen number.
+* If retrieval fails, the system falls back to deterministic diode-mode lookup tables stored in Vercel KV.
+* Netlists are split up by functional block, with 15% overlap at the boundary nodes. Fault-injection simulation runs a breadth-first search (BFS) over the netlist graph.
+
+
+Sources
+
+
+* Triage AI Rev 4: Architectural Design and Implementation, §3–4 (the copy that was read): https://docs.google.com/document/d/1sRtS39NQrMzwZb8luG5G73GySskYK-Vb7BzQHIuTIUQ/edit
+* Duplicate copy of Rev 4: https://docs.google.com/document/d/1d9QqmIDRyyKhcAWwAOzGJpD3o8vfgjMv7_ucfDbmp5o/edit
+* No other Drive file on schematic checking was found.
+
+
+________________
+
+
+2. Technician handoff
+Key specs (pieced together; no single doc covers this)
+
+
+* When a job reaches Tier 3, the agent calls escalate_tier3_ticket (POST /v1/intake/escalate-tier3). The example intake notes end with "Pushed to Lead Tech dashboard."
+* The n8n Tier 3 branch runs in this order: Slack/SMS alert to Ryan → log a high-priority ticket → generate a forensic intake record.
+* Strategic.txt says the agent sends "an immediate high-priority alert to a Slack channel or direct SMS to the Lead Technician, Ryan Young." When bench telemetry shows up, the agent switches to an internal "Technician Assist mode" and must "Halt automated quoting. Escalate ticket immediately to Lead Technician for manual review."
+* After the repair is done, the technician produces a Mobile Diagnostics Format (.mdf) record.
+* Rev 4 writes back to the POS, including the estimated labor level (Level 1–3) and part SKUs.
+
+
+Sources
+
+
+* Triage AI Master Agent Prompt (see §3 for all versions): https://docs.google.com/document/d/1kiYf2DXf-rUyJLXdWDGyaTc2BFNrlnbIOZ9aNdXD7Hs/edit
+* Strategic.txt: https://drive.google.com/file/d/1mnJokEVXUsAlb3y3-kPHPGnztOtGsj0z/view
+* Rev 4: https://docs.google.com/document/d/1sRtS39NQrMzwZb8luG5G73GySskYK-Vb7BzQHIuTIUQ/edit
+* Possibly relevant, not read:
+   * Remote Technician Security Protocol and Liability Framework: https://docs.google.com/document/d/18Ga344M8owdl1wgkZ9PsxVEME3pP-xw9BRas2ZHZ1Zw/edit
+   * Device Intake Form (copy 1): https://docs.google.com/document/d/1EfTLCr_f4vdqc621IWrKm0sx5pmzduLbaAPWnYM1ZfI/edit
+   * Device Intake Form (copy 2): https://docs.google.com/document/d/1Enr0b1tHHhycxrheYIEaRvwinL6BpBds_vEnDOsH71A/edit
+   * Mail In Repair Implementation Guide: https://docs.google.com/document/d/1yQbZz02vlE-I9CUliq7AfWW13lh5Ued3rdz97NQd4rw/edit
+
+
+________________
+
+
+3. ElevenLabs ticket / voice service
+Key specs (the same in all prompt versions)
+
+
+* Persona: "D&CP Virtual Intake Tech (Virtual Ryan)."
+* Voice: ElevenLabs Eleven Flash v2.5, chosen for latency under 400 ms.
+* Tools:
+   * get_repair_quote: POST https://api.displaycellpros.com/v1/pricing/quote
+      * Inputs: device_brand, device_model, repair_type (screen_aftermarket, screen_oem, battery, charging_port, camera, back_glass), is_b2b.
+      * Outputs include tier, parts_cost, labor_cost, markup_overhead, wa_sales_tax_9_1, and total_out_the_door.
+   * dispatch_booking_link: POST /v1/intake/dispatch-sms
+   * escalate_tier3_ticket: POST /v1/intake/escalate-tier3
+* Tax: 9.1% combined Spokane rate (waTaxRate = 0.091).
+* Website widget: <elevenlabs-convai agent-id="REPLACE_WITH_YOUR_ELEVENLABS_AGENT_ID">. The agent ID has not been filled in yet.
+* Intake style (L.E.A.R.N. active-listening protocol): "Do NOT immediately ask for device model numbers, and do NOT give final price quotes on your first reply." This prompt is meant for the "Triage & Quote AI Agent" node in n8n (displaycellpros.app.n8n.cloud).
+
+
+Sources
+
+
+* (a) Triage_AI_Master_Agent_Prompt.md (Doc, Aug 3; ElevenLabs + n8n): https://docs.google.com/document/d/1kiYf2DXf-rUyJLXdWDGyaTc2BFNrlnbIOZ9aNdXD7Hs/edit
+* (b) Triage AI Master Agent Prompt (Doc, Aug 3; Shopify version): https://docs.google.com/document/d/1Qen-xhPHEU5jzufsi2NMzjf73bUH_ssJiFRff2ji8Mg/edit
+* (c) Triage_AI_Master_Agent_Prompt.md.txt (Aug 21, newest; Square/CellSmart, QBO, MobileSentrix, Twilio): https://drive.google.com/file/d/131kJAswcpuX90QKGRVZkYa3n_IQM7DWT/view
+* AI System Prompt for Intake Specialist (L.E.A.R.N.): https://docs.google.com/document/d/1oy2KZwx1BqtKIjG9cAa570vzeOH95kARUcFlk6fbvOg/edit
+* Building Voice AI for Website Intake (not read; the read timed out): https://docs.google.com/document/d/1Xj_QPRnRUua1qX6YkLfAekdw7KaP66VmU3VipC_3xDs/edit
+
+
+________________
+
+
+4. V4 pricing
+Key specs (this is the current standard)
+
+
+* Retail price = wholesale part cost × 1.8 + $75 flat labor.
+* Mobile (on-site) jobs add a $25 trip fee, shown as its own line on the quote (V4 Sheet columns H and I).
+* The Business Plan v2 adds "rounded up to the next whole dollar" to the formula. The Sheet does not round (see Conflicts).
+* Labor went up from $50 to $75.
+* Business Plan v2 figures: average ticket $147.64, gross profit $107.42 (72.8% margin), break-even at 12 repairs per month.
+* Sheet columns: Device Model, Repair Type, Estimated Wholesale Cost, 80% Parts Markup, Labor Rate, Total Retail Price, Spokane Competitor Benchmark, Mobile Trip Fee, Total w/ Trip Fee. The Sheet has 14 rows covering iPhone 12–15, Galaxy S21–S23, and iPad.
+* Sample rows from the Sheet:
+
+
+Device
+	Repair
+	Part cost
+	Markup
+	Labor
+	Retail
+	Competitor
+	Trip fee
+	Total w/ trip fee
+	iPhone 12
+	Screen (Soft OLED)
+	$35.00
+	$63.00
+	$75.00
+	$138.00
+	$179.00
+	$25.00
+	$163.00
+	iPhone 13
+	Screen
+	$47.17
+	$84.91
+	$75.00
+	$159.91
+	—
+	—
+	$184.91
+	Galaxy S23
+	Screen
+	$85.00
+	$153.00
+	$75.00
+	$228.00
+	$299.00
+	$25.00
+	$253.00
+	iPad 9th Gen / Air
+	Screen Digitizer
+	$25.00
+	$45.00
+	$75.00
+	$120.00
+	$179.00
+	$25.00
+	$145.00
+	
+
+* Note: some V4 battery prices are higher than the local competitor price. For example, the iPhone 12 battery is $102 vs. a $99 competitor benchmark.
+
+
+Sources
+
+
+* Display & Cell Pros – Master Pricing Matrix V4 (Sheet; this is the authoritative price list): https://docs.google.com/spreadsheets/d/1uYmEmja5kQfVQT_xvWazkVorEbLDYOpdKYMRQbwJX4I/edit
+* Display & Cell Pros LLC Business Plan v2 (Oct 2026): https://docs.google.com/document/d/1GM1dO5eu-k6anPwjnIw4e_34ikKETzCbz9B7YhRPKpc/edit
+
+
+________________
+
+
+5. Smart triage loop / CoVe
+Key specs
+
+
+* No document uses the exact phrase "smart triage loop." The closest match is the Rev 4 design described below.
+* Two engines:
+   * A fast-path heuristic engine on the Vercel Edge Runtime handles quick checks.
+   * A deep forensic RAG engine on Vercel Fluid Compute (maxDuration = 300) handles the deeper analysis.
+* 4 phases:
+   1. Ingestion and telemetry parsing
+   2. Symptom-to-circuit mapping
+   3. Forensic retrieval and CoVe verification
+   4. Dynamic schematic and rework rendering
+* CoVe has 4 stages:
+   1. Write a draft answer.
+   2. Write verification questions (checked with Zod).
+   3. Look up evidence for each question separately (pgvector + BM25 search).
+   4. Combine the verified results and strictly filter out anything that failed.
+* Refusal rule: if the best-matching schematic chunk scores below 0.82 similarity, the engine refuses. Example message: "INSUFFICIENT_SCHEMATIC_CONTEXT: Pinout specifications for U7100 cannot be verified with 100% confidence. Please refer to manual physical measurement."
+* Power-state current ranges: S5 below 10 mA; S3 from 100 to 300 mA; S0 above 1.2 A.
+* Safety lockout: if current spikes above 2.5 A within 10 ms, the Web Worker immediately halts the hardware.
+* Storage: Vercel Postgres/pgvector, Upstash Redis (KV), and Vercel Blob.
+* POS write-back targets: RepairDesk, RepairShopr, Zendesk, and Salesforce.
+
+
+Sources
+
+
+* Rev 4 (read copy): https://docs.google.com/document/d/1sRtS39NQrMzwZb8luG5G73GySskYK-Vb7BzQHIuTIUQ/edit
+* Strategic.txt (Gemini / AI Studio agent instructions): https://drive.google.com/file/d/1mnJokEVXUsAlb3y3-kPHPGnztOtGsj0z/view
+* Triage & Quote Estimator, Google Opal graphs (not readable through the API; likely duplicates):
+   * https://opal.google/open/1cMLkkrYL2llQ2oye4yBK06hgbwV4RzZ5
+   * https://opal.google/open/1T32SgPLWBHFCfyVwN1t_5IPLMgHNZRQ6
+
+
+________________
+
+
+6. Triage tiers
+Current definitions (from Ryan)
+
+
+* Tier 1, Power and Port: quoted with the V4 formula.
+* Tier 2, Display: quoted with the V4 formula.
+* Tier 3, Board / liquid damage / no power: escalated to Ryan with no firm quote.
+
+
+Supporting details from the sources
+
+
+* The Master Prompt and Strategic.txt define Tier 3 as "Specialized Micro-Soldering & Forensic Diagnostics." They say "DO NOT provide a binding quote" and to trigger escalate_tier3_ticket. They list a $49 Tier 3 diagnostic fee.
+* Turnaround times: Tier 1 is 20–30 minutes; Tier 2 is 45 minutes.
+* Engineering.txt automatically puts a device in Tier 3 when it draws 5.0 A or more.
+* Rev 4 also has a separate set of technician skill levels, which are not the same thing as the customer tiers:
+   * Level 1: Modular Assembly Replacement
+   * Level 2: Surface Mount Component Rework
+   * Level 3: Advanced Micro-soldering & BGA
+   * It also gives the SAC305 solder profile: peak 235–245 °C for 10–20 s, liquidus 217 °C.
+* Engineering.txt lists bench prices: Logic Board Triage $49, Rework Level 1 (FPC / charging IC) $147, Level 2 (VDD_MAIN short rework) $248.
+
+
+Sources
+
+
+* Master Agent Prompt (a): https://docs.google.com/document/d/1kiYf2DXf-rUyJLXdWDGyaTc2BFNrlnbIOZ9aNdXD7Hs/edit
+* Strategic.txt: https://drive.google.com/file/d/1mnJokEVXUsAlb3y3-kPHPGnztOtGsj0z/view
+* Rev 4: https://docs.google.com/document/d/1sRtS39NQrMzwZb8luG5G73GySskYK-Vb7BzQHIuTIUQ/edit
+* Engineering.txt: https://drive.google.com/file/d/1ANMVvYnJR3cevhISH4oXirAjamNHUda0/view
+
+
+________________
+
+
+7. Dashboard
+Best code match (GitHub)
+
+
+* Repo: cheyoung1983-sudo/www.displaycellpros.com-refractored, branch fb.
+   * Main file: src/modules/triage-ai/TelemetryDashboard.tsx
+   * Related views: FirebaseAiWorkbenchView.tsx, ForensicsView.tsx, HardwareScanChart.tsx
+   * Related components: TechnicianDashboard, QuoteBuilderDashboard, ApiGatewayDashboard
+   * Needs Firebase + Gemini. Moving it into dcp-triage on Vercel means wiring those up or replacing them.
+   * Link: https://github.com/cheyoung1983-sudo/www.displaycellpros.com-refractored/tree/fb/src/modules/triage-ai
+* Alternate charts:
+   * Repo portalRev2, branch main: src/components/RepairAnalytics.tsx and TriageAIAgentMaster/Hub.tsx
+   * Repo rev5 serves these at app/analytics/page.tsx
+
+
+Spec on Drive
+
+
+* The Lab Hub User Manual is the clearest written dashboard spec. It describes a "Diagnostic Cloud" / "Diagnostic Hub" on GCP Cloud Run with a left sidebar for device setup and B2B domain verification.
+* Modules:
+   1. AI Hardware Triage Console
+   2. POS Ledger & Sync APIs: a table of unbilled Square/CellSmart tickets with "DSC-XXXX" IDs, plus a webhook console
+   3. Washington Destination Sales Tax Compliance Agent
+* A panel on the right shows a live quote.
+* Endpoints: /api/tax-lookup, /api/generate-quote, /api/verify-b2b, /api/triage. The Gemini API key (GEMINI_API_KEY) is stored in GCP Secret Manager.
+* The Master Prompt mentions a "Lead Tech dashboard," but no spec for it was found.
+
+
+Sources
+
+
+* Lab Hub User Manual: https://docs.google.com/document/d/1lO-VFxABesQNaZOj2JD_m6mPFePVSq0DO2dyLg6epDs/edit
+* display-&-cell-pros-diagnostic-hub.zip (probably the Lab Hub code; not opened): https://drive.google.com/file/d/1yPbemrDm_OKQ6-AXGki1j8M71qQDqKxv/view
+* d&cp-llc-repair-portal (3).zip (repair portal code that mentions ElevenLabs; not opened): https://drive.google.com/file/d/1cZmwLoD918meRFLu_Bx8j9vGh6ev6Qwt/view
+* ai_studio_code.html (not read): https://drive.google.com/file/d/1sBe4vTQnQ6rn_igi_XsyhY7TOCRCSpgb/view
+
+
+________________
+
+
+8. Refactored repo work (www.displaycellpros.com-refractored)
+Key specs
+
+
+* Implementation plan, "Fix Vercel Build (Module Resolution)":
+   * All source files were moved under src/.
+   * The tsconfig path alias changes from @/*: ["./*"] to @/*: ["./src/*"].
+   * The Tailwind content globs change to ./src/app/** and ./src/components/**.
+* README_PROD (production guide):
+   * Health check: https://www.displaycellpros.com/api/health
+   * Rate limit: express-rate-limit at 100 requests per 15 minutes per IP.
+   * Rotate OPENAI_API_KEY and STREAM_API_SECRET every 6 months.
+   * The leftover routes /api/movies and /api/rds-status look like template boilerplate.
+* Ryan's local copy of the repo is at C:/Users/cheyo/OneDrive/Documents/GitHub/www.displaycellpros.com-refractored. A synced copy of the IDE files and build output is on Drive.
+* Engineering.txt describes a "Next.js Device Intake Workflow and Shopify GraphQL Data Architecture … on Vercel." It uses the old $50/hr pricing.
+* The triage dashboard modules are on branch fb (see §7).
+
+
+Sources
+
+
+* implementation_plan.artifact.md: https://drive.google.com/file/d/1mrLmGMeVstXmJgQT28HcbhcWQvFL177B/view
+* README_PROD.md: https://drive.google.com/file/d/1v5UE-XoaYuE07ZvwbPQiBylUdCPtBWop/view
+* Project .iml file: https://drive.google.com/file/d/1xdpACyxFoOtRDpaSAvB-7PBJP6--G1N2/view
+* Engineering.txt (copies):
+   * https://drive.google.com/file/d/1ANMVvYnJR3cevhISH4oXirAjamNHUda0/view
+   * https://drive.google.com/file/d/1LnTqZ9bRH3nojPjogB0TzHDC3tAUiU9k/view
+   * https://drive.google.com/file/d/1UCMFhS4QakCzQ2OFM5NkaHJ-DVqRaGWS/view
+   * https://drive.google.com/file/d/1axZSvSaI4z0b3QeDN2gK7nc_k_cV-yK_/view
+* GitHub: https://github.com/cheyoung1983-sudo/www.displaycellpros.com-refractored/tree/fb
+
+
+________________
+
+
+Conflicts and gaps
+Pricing
+
+
+1. Rounding mismatch. Business Plan v2 says prices are "rounded up to the next whole dollar," but the V4 Sheet shows unrounded totals:
+
+
+   * iPhone 13: $159.91 in the Sheet vs. $160 in the plan
+   * iPhone 15: $215.40 in the Sheet vs. $216 in the plan
+
+
+Decide which rule the quote API uses, then update the other source to match.
+
+
+2. Old labor rates and formulas. These all predate V4 and should be treated as replaced by it:
+
+
+   * The Master Prompt docs, Engineering.txt, and Strategic material use $50/hr with time allocations (0.75 hr = $37.50 for displays, 0.50 hr = $25.00 for batteries).
+   * The Master Prompt also gives a fixed Tier 1 range of $69–$97 and claims a 59.7% minimum margin.
+   * The Lab Hub uses $85/hr.
+
+
+These need to be fixed before any of these prompts or the Lab Hub are reused.
+
+
+3. B2B discount. The Master Prompt gives 15% off labor; the Lab Hub gives 20% off for fleets. V4 doesn't set a B2B rule.
+
+
+ElevenLabs agent 4. Three different ElevenLabs prompts:
+
+
+* (a) the .md Doc, built on n8n
+* (b) a Shopify version (Shopify booking/checkout link, QBO, n8n)
+* (c) the newest .md.txt (Square/CellSmart, QBO, MobileSentrix, Twilio)
+
+
+Pick one as the master copy. The ElevenLabs agent ID is also still a placeholder.
+
+
+Platforms 5. Platforms don't agree:
+
+
+* POS: Square/CellSmart vs. Shopify vs. RepairDesk (mail-in plan). Rev 4 also lists RepairShopr, Zendesk, and Salesforce for write-back.
+* Model and host: OpenAI/Vercel (Rev 4) vs. Gemini/GCP Cloud Run (Lab Hub) vs. Firebase + Gemini (the fb dashboard code).
+
+
+Tiers 6. Tiers vs. skill levels. The customer tiers (Tier 1–3) and Rev 4's technician skill levels (Level 1–3) use similar names for different things. Engineering.txt mixes the two ("Tier 3 Initial Diagnostic", "Rework Level 1/2"). Its 5.0 A auto-Tier-3 trigger is also separate from Rev 4's 2.5 A safety halt.
+
+
+Duplicates 7. Duplicate files:
+
+
+* Rev 4 ×2 (saved 16 seconds apart, identical size)
+* Engineering.txt ×3, plus a probable 4th copy as a paste
+* Device Intake Form ×2
+* Triage & Quote Estimator Opal graph ×2
+* The Master Prompt .md Doc and its .txt copy
+
+
+Gaps 8. No technician handoff doc. The handoff steps are spread across the Master Prompt, Strategic.txt, and Rev 4. Nobody has defined what the .mdf record or the "Lead Tech dashboard" contains. 9. Files not read:
+
+
+* Building Voice AI for Website Intake (the read timed out twice)
+* Remote Technician Security Protocol
+* Device Intake Form
+* Mail In Repair Implementation Guide
+* diagnostic-hub.zip and repair-portal zip
+* ai_studio_code.html
+* the Opal graphs
+10. Leftover boilerplate in the refactored repo. The /api/movies and /api/rds-status routes in README_PROD look like template leftovers and should be checked or removed.
+11. "Smart triage loop" undefined. No source uses the phrase. This doc treats it as the Rev 4 CoVe loop.
