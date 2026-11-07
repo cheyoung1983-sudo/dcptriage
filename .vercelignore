@@ -1,9 +1,4 @@
-# Build output
-.next
-dist
-out
-.swc
-
+# Dependencies
 # Dependencies
 node_modules
 
@@ -49,7 +44,6 @@ api/
 app.yaml
 deploy.sh
 Dockerfile
-metadata.json
 pemhttpd.exe
 *.exe
 

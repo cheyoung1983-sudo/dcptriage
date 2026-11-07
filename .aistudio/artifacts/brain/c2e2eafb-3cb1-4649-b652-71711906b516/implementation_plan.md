@@ -1,75 +1,80 @@
-# Restructure Top Header Bar for Soft Operation Hours & Drop-Off
+# Remote Pull and Clean Rebuild Plan
 
-Restructure the global top header announcement bar across all pages to communicate soft operational hours (Wednesday through Friday, 10:00 AM – 4:00 PM PST), 24/7 lockbox drop-off availability at the Spokane Monroe St location, and wire interactive action CTAs.
+A structured workflow to initialize git in the workspace, connect to `cheyoung1983-sudo/dcptriage`, pull and merge remote source updates while preserving local Next.js 15 stability patches, and execute a clean rebuild.
 
 ## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> - **Confirmed Address**: `PO Box 1308 6325 N Monroe St. Spokane, WA 99208`
-> - **Positioning**: Global persistent top announcement bar placed above the primary navigation across all pages (`LayoutWrapper.tsx`).
-> - **Primary CTA Behavior**: The "Schedule Soft Intake" button will directly open the interactive repair intake booking modal.
-> - **Secondary CTAs**:
->   - **GPS Check**: Direct link to Google Maps with the confirmed Monroe St location.
->   - **Google Calendar**: Direct link / event booking shortcut for the customer's intake slot.
+> The following parameters were confirmed during the interactive clarification phase:
+
+- **Confirmed Decision 1**: Target remote source is `cheyoung1983-sudo/dcptriage`.
+- **Confirmed Decision 2**: Merge remote changes into the workspace while keeping local Next.js 15 compatibility fixes (error boundaries, webpack configuration, and `patch-next.cjs`).
+- **Confirmed Decision 3**: Full clean rebuild execution pipeline: clear cached artifacts, run Prisma generation, apply patch script, and compile Next.js production build (`npm run build`).
 
 ---
 
 ## 1. Overview & Core Concept
 
-- **What It Does**: Provides an unmissable, responsive top notification bar communicating the current temporary operational status ("Soft Operation Active"), operational window (Wed–Fri | 10:00 AM – 4:00 PM PST), 24/7 lockbox drop-off notice, and one-click actions.
-- **Target Audience**: Spokane customers needing urgent drop-offs or mobile repairs who need immediate clarity on when the lab is open for in-person intake.
-- **Key Value**: Sets accurate customer expectations, prevents missed drop-offs, and provides immediate paths to book soft intake or navigate to the Spokane facility.
+- **What It Does**: Establishes local git tracking for `https://github.com/cheyoung1983-sudo/dcptriage.git`, fetches and integrates incoming commits/files from the remote branch, protects local App Router error boundary and Webpack devtools fixes from being overwritten, and runs a comprehensive compilation and lint check.
+- **Target Audience**: Development operations and production triage workstation.
+- **Key Value**: Synchronizes latest upstream source logic from the GitHub repository into the AI Studio environment without breaking build stability.
 
 ---
 
 ## 2. User Experience & Visual Design
 
-- **Visual Tone**: Technical amber warning status (`#F59E0B` / `bg-amber-500/10 border-amber-500/30 text-amber-300`) denoting soft operations without sounding alarmist or broken.
-- **Layout Rhythm**:
-  - Horizontal single-line strip on desktop (`h-10` or `py-2`) with subtle dot dividers (`·`).
-  - Gracefully wraps or condenses on mobile viewports so it never pushes content off-screen.
-- **Interactive Triggers**:
-  - `Schedule Soft Intake`: Dispatches modal opening event to `AIAssistantModalManager` or the repair booking modal.
-  - `GPS Check`: Direct link opening Google Maps pin for `6325 N Monroe St, Spokane, WA 99208`.
-  - `Google Calendar`: Opens quick appointment addition / Google Calendar event template.
+- **Status Feedback**: Build and pull results will be logged clearly with commit hashes, updated files, and build verification status.
+- **Workstation UI Continuity**: Preserves dark tactical UI styling (`bg-slate-950`, high-contrast telemetry headers, diagnostics console).
 
 ---
 
 ## 3. Key Product Decisions & Trade-Offs
 
-- **Decision 1: Standalone Reusable Component vs Inlined HTML**
-  - *Chosen Approach*: Create a dedicated `TopAnnouncementBar.tsx` component in `src/components/` and render it inside `LayoutWrapper.tsx`.
-  - *Why*: Ensures uniform appearance on every route (`/`, `/services`, `/store`, `/b2b`, `/lab`) with consistent event handling and no copy-paste duplication.
-- **Decision 2: Mobile Viewport Optimization**
-  - *Chosen Approach*: Priority truncation and stacked or scrollable micro-CTAs on screens under 640px to respect the 15% mobile sticky ceiling.
-  - *Why*: Guarantees that mobile visitors can still see the hero headline and main booking buttons without being dominated by the top bar.
+- **Decision 1: Git Remote Initialization & Auth Strategy**
+  - *Chosen Approach*: Initialize `.git` in `/app/applet`, configure safe directory, set remote origin to `cheyoung1983-sudo/dcptriage`, configure credentials using the configured GitHub access token, and fetch remote branches.
+  - *Why*: Allows proper version control synchronization and avoids authentication failures on private repositories.
+
+- **Decision 2: Merge with Local Patch Preservation**
+  - *Chosen Approach*: Fetch remote branches into a tracking branch, diff/merge changes into workspace, ensuring local fixes in `scripts/patch-next.cjs`, `next.config.js`, `tsconfig.json`, `src/app/global-error.tsx`, `src/app/error.tsx`, and `src/app/not-found.tsx` remain intact.
+  - *Why*: Direct unmerged overwrite would reintroduce the Next.js 15 `__webpack_modules__[moduleId] is not a function` error and static generation build failures.
+
+- **Decision 3: Full Clean Rebuild**
+  - *Chosen Approach*: Execute `rm -rf .next && npx prisma generate && node scripts/patch-next.cjs && npm run build`.
+  - *Why*: Guarantees fresh Prisma client generation and clean route manifests without stale webpack cache artifacts.
 
 ---
 
-## 4. Technical Architecture & Component Flow
+## 4. Technical Architecture & Execution Sequence
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│               TopAnnouncementBar                       │
-│  [⚡ SOFT OPERATION ACTIVE] · [📍 6325 N Monroe St]    │
-│  · [24/7 Lockbox Active]  [GPS] [Schedule] [Calendar]  │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-                           ▼
+│               1. Git Remote Setup & Auth               │
+│  - Init git in /app/applet                             │
+│  - Set remote origin cheyoung1983-sudo/dcptriage       │
+│  - Configure auth & fetch remote branch                │
+└───────────────────────────┬────────────────────────────┘
+                            │
+                            ▼
 ┌────────────────────────────────────────────────────────┐
-│               Global Header / Navbar                   │
-│   DisplayCellPros  ───  Nav Links  ───  Book Mission   │
+│            2. Merge Remote Source Changes              │
+│  - Integrate remote updates                            │
+│  - Verify/preserve Next.js 15 patches & boundaries     │
+└───────────────────────────┬────────────────────────────┘
+                            │
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│             3. Clean Build & Verification              │
+│  - Clear stale .next cache                             │
+│  - Run Prisma client generation                        │
+│  - Execute node scripts/patch-next.cjs                 │
+│  - Run compile_applet (npm run build) & lint_applet    │
+│  - Restart dev server                                  │
 └────────────────────────────────────────────────────────┘
 ```
 
-- **Component Creation**: `src/components/TopAnnouncementBar.tsx`
-  - Amber status badge with glowing pill indicator.
-  - Truncatable address link with map pin.
-  - Lockbox notice with secure lock icon.
-  - Action buttons with clean hover transitions.
-- **Integration**:
-  - Mount inside `src/components/LayoutWrapper.tsx` at the top of the body tree.
-  - Update `src/components/new_design/Header.tsx` or coordinate fixed offsets so the navigation floats smoothly beneath the announcement bar.
-- **Verification**:
-  - Test responsive layout at 1440px desktop and 375px mobile viewports.
-  - Validate click handlers and compilation via `compile_applet`.
+- **Execution Steps**:
+  1. Initialize git repository in workspace and link remote `origin`.
+  2. Fetch remote `main` branch from `cheyoung1983-sudo/dcptriage`.
+  3. Merge remote changes, confirming critical patch files are intact.
+  4. Run clean build and verification (`lint_applet` and `compile_applet`).
+  5. Restart dev server to serve the refreshed application.
