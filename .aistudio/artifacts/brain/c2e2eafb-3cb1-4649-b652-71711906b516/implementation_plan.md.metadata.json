@@ -1,6 +1,0 @@
-{
-  "summary": "Implementation plan to initialize git, pull from the remote repository cheyoung1983-sudo/dcptriage, merge updates while preserving local Next.js 15 patches, and execute a full clean rebuild.",
-  "updatedAt": "2026-11-03T21:30:29.987570443Z",
-  "requestFeedback": true,
-  "userFacing": true
-}

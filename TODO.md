@@ -26,3 +26,12 @@ Once the above steps are completed:
    ```bash
    npx vercel --prod
    ```
+
+## 5. Repo hygiene (chore/clutter)
+- [DONE] Removed unreferenced AI-tool folders: .aistudio, .claude, .cursor, .gemini, .windsurf (only referenced by .vercelignore, which no longer needs them). AGENTS.md kept.
+- [DONE] Removed `server.ts` (legacy Express server; not imported, not used by `npm run dev`/`start`).
+- [DONE] Removed `components/new_design/Header.tsx` (unused; the live header is `components/Navbar.tsx`).
+- [TODO] Unused top-level components to review before deleting (no imports found): AuthLoadingOverlay, LoginButton, LogoutButton, OAuthDocumentationPanel, Profile, QrScannerModal, UsbSimulator, VercelLoginButton.
+- [TODO] Add rate limiting for public API routes (Edge middleware / Upstash ratelimit).
+- [TODO] `/api/mcp/token` returns a mock token publicly; replace or remove.
+- [TODO] Decide storefront vs triage split (see PR #8 discussion); pricing/quote now lives in `src/lib/pricing.ts`.

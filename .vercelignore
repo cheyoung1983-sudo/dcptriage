@@ -12,10 +12,6 @@ node_modules
 .idea
 .git
 .artifacts
-.claude
-.cursor
-.gemini
-.windsurf
 *.log
 tsconfig.tsbuildinfo
 
@@ -39,7 +35,6 @@ www.displaycellpros.com-refractored
 .backup
 
 # Legacy Root Files
-server.ts
 api/
 app.yaml
 deploy.sh

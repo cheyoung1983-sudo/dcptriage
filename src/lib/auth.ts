@@ -8,8 +8,8 @@
  */
 import { createHash, timingSafeEqual } from 'node:crypto'
 
-export const AGENT_SECRET_HEADER = 'x-dcp-agent-secret'
-export const AGENT_SECRET_ENV = 'ELEVENLABS_WEBHOOK_SECRET'
+export const AGENT_SECRET_HEADER = 'x-dcp-agent-secret' // secret-scan:allow (header/env var name, not a value)
+export const AGENT_SECRET_ENV = 'ELEVENLABS_WEBHOOK_SECRET' // secret-scan:allow (header/env var name, not a value)
 
 function digest(value: string): Uint8Array {
   return new Uint8Array(createHash('sha256').update(value, 'utf8').digest())
