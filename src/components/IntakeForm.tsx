@@ -36,7 +36,10 @@ import {
   ServiceTier 
 } from '../types';
 import { cn } from '../lib/utils';
-import { calculateQuote, PricingBreakdown } from '../lib/pricing';
+import { repairsForTier, REPAIR_LABELS } from '../lib/customer-quote';
+import type { RepairType } from '../lib/tiers';
+import { useCustomerQuote } from '../hooks/useCustomerQuote';
+import CustomerQuoteSummary from './CustomerQuoteSummary';
 import AIDiagnostic from './AIDiagnostic';
 import DeviceCameraCapture, { CapturedPhoto } from './DeviceCameraCapture';
 import TechnicianChecklist from './TechnicianChecklist';
@@ -65,7 +68,8 @@ export default function IntakeForm() {
     attachedPhotoCount?: number; 
     attachedCategories?: string[]; 
   } | null>(null);
-  const [quote, setQuote] = useState<PricingBreakdown | null>(null);
+  const [repairType, setRepairType] = useState<RepairType | ''>('');
+  const [mobileService, setMobileService] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [draftRestored, setDraftRestored] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
@@ -112,6 +116,11 @@ export default function IntakeForm() {
   });
 
   const formData = watch();
+  const validRepair = repairsForTier(formData.serviceTier).includes(repairType as RepairType) ? repairType : '';
+  const quoteState = useCustomerQuote({ device_model: formData.deviceModel || '',
+    repair_type: validRepair, mobile_service: mobileService, service_tier: formData.serviceTier,
+    symptoms: formData.customerReportedIssue, board_short: formData.telemetry?.isShortToGround });
+  const quote = quoteState.status === 'ready' ? quoteState.quote : null;
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
 
   // Dynamic Section completion calculations for animated progress bar
@@ -169,6 +178,8 @@ export default function IntakeForm() {
         const parsed = JSON.parse(savedDraft);
         if (parsed && parsed.formData) {
           reset(parsed.formData);
+          if (typeof parsed.repairType === 'string' && parsed.repairType in REPAIR_LABELS) setRepairType(parsed.repairType as RepairType);
+          setMobileService(parsed.mobileService === true);
           if (parsed.step && parsed.step >= 1 && parsed.step <= 4) {
             setStep(parsed.step);
           }
@@ -198,6 +209,8 @@ export default function IntakeForm() {
       const draftPayload = {
         step,
         formData,
+        repairType,
+        mobileService,
         devicePhotos,
         selectedSymptomIds,
         savedAt: now.toISOString(),
@@ -205,13 +218,7 @@ export default function IntakeForm() {
       localStorage.setItem('dcp_intake_draft', JSON.stringify(draftPayload));
       setLastSavedTime(now.toLocaleTimeString());
     }
-  }, [formData, devicePhotos, selectedSymptomIds, step, isDraftLoaded]);
-
-  useEffect(() => {
-    if (formData.serviceTier && formData.destinationZipCode) {
-      setQuote(calculateQuote(formData.serviceTier, formData.destinationZipCode));
-    }
-  }, [formData.serviceTier, formData.destinationZipCode]);
+  }, [formData, repairType, mobileService, devicePhotos, selectedSymptomIds, step, isDraftLoaded]);
 
   const handleToggleSymptom = (symptom: SymptomItem) => {
     const isCurrentlySelected = selectedSymptomIds.includes(symptom.id);
@@ -270,6 +277,8 @@ export default function IntakeForm() {
     localStorage.removeItem('dcp_intake_draft');
     setSelectedSymptomIds([]);
     setDevicePhotos([]);
+    setRepairType('');
+    setMobileService(false);
     reset({
       deviceManufacturer: Manufacturer.APPLE,
       deviceModel: '',
@@ -373,6 +382,8 @@ export default function IntakeForm() {
       },
     });
     setDevicePhotos([]);
+    setRepairType('');
+    setMobileService(false);
     setSelectedSymptomIds([]);
     setStep(1);
     setDraftRestored(false);
@@ -385,6 +396,8 @@ export default function IntakeForm() {
     try {
       const payload = {
         ...data,
+        repairType: validRepair,
+        mobileService,
         devicePhotos,
         photoMetadata: {
           totalCount: devicePhotos.length,
@@ -806,6 +819,14 @@ export default function IntakeForm() {
                         </div>
                       </div>
 
+                      <label className="block">Specific repair
+                        <select aria-label="Specific repair" value={validRepair} onChange={e => setRepairType(e.target.value as RepairType)} className="block w-full p-3 border rounded-xl">
+                          <option value="">Select a repair</option>
+                          {repairsForTier(formData.serviceTier).map(r => <option key={r} value={r}>{REPAIR_LABELS[r]}</option>)}
+                        </select>
+                      </label>
+                      <label className="flex gap-2"><input type="checkbox" checked={mobileService} onChange={e => setMobileService(e.target.checked)} />Mobile / on-site service</label>
+
                       <div className="space-y-2">
                         <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Issue Description</label>
                         <textarea 
@@ -1100,38 +1121,10 @@ export default function IntakeForm() {
                   </p>
                 </div>
 
-                {quote && (
-                  <div className="bg-white rounded-3xl p-8 border-2 border-slate-900 shadow-xl shadow-slate-200/50 space-y-6">
-                    <h4 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900 border-b border-slate-100 pb-4">Financial Breakdown</h4>
-                    <div className="space-y-4">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">Parts Allocation</span>
-                        <span className="font-bold text-slate-900">${quote.partsCost.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">Labor (${formData.serviceTier === ServiceTier.TIER_3_BOARD ? '2.5' : '0.75'} hrs)</span>
-                        <span className="font-bold text-slate-900">${quote.laborCost.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">Overhead Markup (80%)</span>
-                        <span className="font-bold text-slate-900">${quote.overhead.toFixed(2)}</span>
-                      </div>
-                      <div className="h-px bg-slate-100" />
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">Subtotal</span>
-                        <span className="font-bold text-slate-900">${quote.subtotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">Estimated Tax (WA)</span>
-                        <span className="font-bold text-slate-900">${quote.tax.toFixed(2)}</span>
-                      </div>
-                      <div className="pt-4 flex justify-between items-end">
-                        <span className="text-xs font-black uppercase tracking-widest text-blue-600">Total Quote</span>
-                        <span className="text-4xl font-black text-slate-900">${quote.total.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <div className="bg-white rounded-3xl p-8 border-2 border-slate-900 space-y-6">
+                  <h4 className="font-bold">Repair estimate</h4>
+                  <CustomerQuoteSummary state={quoteState} />
+                </div>
 
                 {/* Camera Intake Attached Photos Review Section */}
                 <div className="md:col-span-2 bg-slate-900 text-white rounded-3xl p-6 md:p-8 space-y-4 shadow-xl">
@@ -1336,7 +1329,7 @@ export default function IntakeForm() {
                     <h4 className="text-sm font-bold text-slate-900 mb-1">{entry.deviceModel}</h4>
                     <p className="text-[10px] font-mono text-slate-500 uppercase mb-3">IMEI: {entry.imei}</p>
                     <div className="flex justify-between items-center">
-                      <span className="text-xs font-black text-slate-900">${entry.quote?.total.toFixed(2)}</span>
+                      <span className="text-xs font-black text-slate-900">{entry.quote?.quote_available === true && typeof entry.quote.total === 'number' ? `${entry.quote.currency} ${entry.quote.total.toFixed(2)}` : 'Price not confirmed'}</span>
                       <button className="p-1.5 bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
                         <FileText className="w-3.5 h-3.5 text-slate-400" />
                       </button>
