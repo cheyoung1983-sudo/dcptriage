@@ -1,38 +1,31 @@
-import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Calculator, 
-  Smartphone, 
-  Zap, 
-  Cpu, 
-  Layers, 
-  Info,
-  ArrowRight,
-  ShieldCheck,
-  Receipt,
-  AlertCircle,
-  Clock,
-  Database,
-  Sparkles,
-  Check
-} from 'lucide-react';
+import { useState } from 'react';
+import { Calculator, Smartphone, Zap, Cpu, Layers, ArrowRight, ShieldCheck, Receipt, AlertCircle } from 'lucide-react';
 import { ServiceTier, Manufacturer } from '../types';
-import { calculateQuote, PricingBreakdown, PRICING_TIERS } from '../lib/pricing';
+import { repairsForTier, REPAIR_LABELS } from '../lib/customer-quote';
+import type { RepairType } from '../lib/tiers';
+import { useCustomerQuote } from '../hooks/useCustomerQuote';
+import CustomerQuoteSummary from './CustomerQuoteSummary';
 import TriageSecurityResearchModal from './TriageSecurityResearchModal';
 
 const ISSUES = [
   { 
-    id: 'charging', 
+    id: 'charging',
+    label: 'Battery & Power Systems',
+    complexity: 'Tier 1',
     tier: ServiceTier.TIER_1_POWER,
     icon: Zap,
   },
   { 
-    id: 'display', 
+    id: 'display',
+    label: 'Display & Visual Systems',
+    complexity: 'Tier 2',
     tier: ServiceTier.TIER_2_DISPLAY,
     icon: Layers,
   },
   { 
-    id: 'board', 
+    id: 'board',
+    label: 'Logic Board & Micro-Soldering',
+    complexity: 'Tier 3',
     tier: ServiceTier.TIER_3_BOARD,
     icon: Cpu,
   }
@@ -48,19 +41,11 @@ export default function RepairEstimateCalculator() {
   const [manufacturer, setManufacturer] = useState<Manufacturer>(Manufacturer.APPLE);
   const [model, setModel] = useState(MODELS[Manufacturer.APPLE][0]);
   const [selectedIssue, setSelectedIssue] = useState(ISSUES[0]);
-  const [zip, setZip] = useState('99201'); // Default to Spokane Lab zip
-
-  // Additional Service Toggles
-  const [rushPriority, setRushPriority] = useState(false);
-  const [dataRecovery, setDataRecovery] = useState(false);
-
-  const quote: PricingBreakdown = useMemo(() => {
-    return calculateQuote(selectedIssue.tier, zip, {
-      model,
-      isRush: rushPriority,
-      isDataRecovery: dataRecovery
-    });
-  }, [selectedIssue, zip, model, rushPriority, dataRecovery]);
+  const [repairType, setRepairType] = useState<RepairType | ''>('');
+  const [mobileService, setMobileService] = useState(false);
+  const validRepair = repairsForTier(selectedIssue.tier).includes(repairType as RepairType) ? repairType : '';
+  const quoteState = useCustomerQuote({ device_model: model, repair_type: validRepair,
+    mobile_service: mobileService, service_tier: selectedIssue.tier });
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8 space-y-12">
@@ -74,7 +59,7 @@ export default function RepairEstimateCalculator() {
           Repair Estimate Calculator
         </h2>
         <p className="text-slate-500 text-sm font-medium leading-relaxed">
-          Generate an immediate engineering estimate for your device restoration. Adjust hardware models, issue complexity, and expedited laboratory options in real time.
+          Generate an immediate engineering estimate for your device restoration. Select your hardware model, specific repair, and mobile or lab service.
         </p>
       </div>
 
@@ -145,13 +130,13 @@ export default function RepairEstimateCalculator() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {ISSUES.map((issue) => {
-                const tierData = PRICING_TIERS[issue.tier];
+                const tierData = issue;
                 const Icon = issue.icon;
                 const isActive = selectedIssue.id === issue.id;
                 return (
                   <button
                     key={issue.id}
-                    onClick={() => setSelectedIssue(issue)}
+                    onClick={() => { setSelectedIssue(issue); setRepairType(''); }}
                     className={`p-6 rounded-[2rem] border-2 text-left transition-all space-y-4 ${
                       isActive 
                         ? 'bg-blue-50/50 border-blue-600 shadow-lg shadow-blue-500/10' 
@@ -171,13 +156,11 @@ export default function RepairEstimateCalculator() {
                       </span>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[8px] font-black uppercase tracking-widest text-blue-600">{tierData.category}</p>
+
                       <h4 className={`font-bold text-sm ${isActive ? 'text-blue-900' : 'text-slate-900'}`}>
                         {tierData.label}
                       </h4>
-                      <p className="text-[10px] font-medium text-slate-500 leading-tight">
-                        {tierData.description}
-                      </p>
+
                     </div>
                   </button>
                 );
@@ -185,134 +168,15 @@ export default function RepairEstimateCalculator() {
             </div>
           </section>
 
-          {/* Additional Service Toggles: Rush Priority & Data Recovery */}
-          <section className="bg-white border border-slate-100 rounded-[2.5rem] p-8 md:p-10 shadow-xl shadow-slate-200/50 space-y-6">
-            <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
-              <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
-                <Sparkles className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-slate-900">Optional Laboratory Add-ons</h3>
-                <p className="text-xs font-medium text-slate-400">Expedite turnaround or safeguard user data</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Rush Priority Toggle */}
-              <div 
-                onClick={() => setRushPriority(!rushPriority)}
-                className={`p-6 rounded-[2rem] border-2 cursor-pointer transition-all space-y-3 relative overflow-hidden ${
-                  rushPriority 
-                    ? 'bg-blue-50/70 border-blue-600 shadow-md ring-2 ring-blue-600/20' 
-                    : 'bg-white border-slate-100 hover:border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                      rushPriority ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      <Clock className="w-4 h-4" />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-100/50 px-2.5 py-0.5 rounded-full">
-                      Same-Day Queue
-                    </span>
-                  </div>
-
-                  {/* Toggle Switch Graphic */}
-                  <div className={`w-12 h-6 rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
-                    rushPriority ? 'bg-blue-600' : 'bg-slate-200'
-                  }`}>
-                    <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out flex items-center justify-center ${
-                      rushPriority ? 'translate-x-6' : 'translate-x-0'
-                    }`}>
-                      {rushPriority && <Check className="w-3 h-3 text-blue-600" />}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-bold text-slate-900 text-sm">Rush Priority Queue</h4>
-                    <span className="text-xs font-black text-blue-600">+$49.00</span>
-                  </div>
-                  <p className="text-xs text-slate-500 font-medium leading-relaxed mt-1">
-                    Bypasses standard bench wait times. Expedited component staging for under 4-hour lab turnaround.
-                  </p>
-                </div>
-              </div>
-
-              {/* Data Recovery Toggle */}
-              <div 
-                onClick={() => setDataRecovery(!dataRecovery)}
-                className={`p-6 rounded-[2rem] border-2 cursor-pointer transition-all space-y-3 relative overflow-hidden ${
-                  dataRecovery 
-                    ? 'bg-indigo-50/70 border-indigo-600 shadow-md ring-2 ring-indigo-600/20' 
-                    : 'bg-white border-slate-100 hover:border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                      dataRecovery ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      <Database className="w-4 h-4" />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-100/50 px-2.5 py-0.5 rounded-full">
-                      Forensic Backup
-                    </span>
-                  </div>
-
-                  {/* Toggle Switch Graphic */}
-                  <div className={`w-12 h-6 rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
-                    dataRecovery ? 'bg-indigo-600' : 'bg-slate-200'
-                  }`}>
-                    <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out flex items-center justify-center ${
-                      dataRecovery ? 'translate-x-6' : 'translate-x-0'
-                    }`}>
-                      {dataRecovery && <Check className="w-3 h-3 text-indigo-600" />}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-bold text-slate-900 text-sm">Data Recovery & Backup</h4>
-                    <span className="text-xs font-black text-indigo-600">+$75.00</span>
-                  </div>
-                  <p className="text-xs text-slate-500 font-medium leading-relaxed mt-1">
-                    NAND forensic extraction & encrypted cloud archive prior to board teardown or chip replacement.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2 pt-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Spokane Area Zip (Optional for Tax Calibration)</label>
-              <div className="flex gap-2">
-                {['99201', '99206', '99212'].map((z) => (
-                  <button
-                    key={z}
-                    onClick={() => setZip(z)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all ${
-                      zip === z 
-                        ? 'bg-slate-900 border-slate-900 text-white' 
-                        : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
-                    }`}
-                  >
-                    {z}
-                  </button>
-                ))}
-                <input 
-                  type="text" 
-                  maxLength={5}
-                  value={zip}
-                  onChange={(e) => setZip(e.target.value.replace(/\D/g, ''))}
-                  className="flex-1 px-4 py-2 rounded-xl bg-slate-50 border-2 border-transparent focus:border-slate-900 outline-none text-xs font-bold"
-                  placeholder="Custom Zip"
-                />
-              </div>
-            </div>
+          <section className="bg-white border border-slate-100 rounded-3xl p-8 space-y-4">
+            <label className="block">Specific repair
+              <select aria-label="Specific repair" value={validRepair} onChange={e => setRepairType(e.target.value as RepairType)} className="block w-full p-3 border rounded-xl">
+                <option value="">Select a repair</option>
+                {repairsForTier(selectedIssue.tier).map(r => <option key={r} value={r}>{REPAIR_LABELS[r]}</option>)}
+              </select>
+            </label>
+            <label className="flex gap-2"><input type="checkbox" checked={mobileService} onChange={e => setMobileService(e.target.checked)} />Mobile / on-site service</label>
+            <p className="text-xs">Rush service and data recovery require technician review; they are not priced as automatic add-ons.</p>
           </section>
         </div>
 
@@ -324,80 +188,9 @@ export default function RepairEstimateCalculator() {
                 <ShieldCheck className="w-32 h-32" />
               </div>
 
-              <div className="space-y-2 relative z-10">
-                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Restoration Estimate</h4>
-                <div className="flex items-baseline gap-2">
-                  <motion.span 
-                    key={quote.total}
-                    initial={{ scale: 0.95, opacity: 0.8 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="text-5xl font-black"
-                  >
-                    ${quote.total.toFixed(2)}
-                  </motion.span>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">USD</span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-500/30">
-                    {selectedIssue.tier.replace('_', ' ')}
-                  </div>
-                  {quote.modelAdjustment > 0 && (
-                    <div className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500/20 text-amber-300 rounded-full text-[10px] font-bold border border-amber-500/30">
-                      Flagship Tier
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-3.5 pt-4 border-t border-slate-800 relative z-10">
-                <div className="flex justify-between text-xs font-bold">
-                  <span className="text-slate-400 uppercase tracking-widest">Parts & Component Cost</span>
-                  <span>${quote.partsCost.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-xs font-bold">
-                  <span className="text-slate-400 uppercase tracking-widest">Engineering Labor</span>
-                  <span>${quote.laborCost.toFixed(2)}</span>
-                </div>
-
-                {rushPriority && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="flex justify-between text-xs font-bold text-blue-400"
-                  >
-                    <span className="uppercase tracking-widest flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> Rush Expedite Fee
-                    </span>
-                    <span>+$49.00</span>
-                  </motion.div>
-                )}
-
-                {dataRecovery && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="flex justify-between text-xs font-bold text-indigo-400"
-                  >
-                    <span className="uppercase tracking-widest flex items-center gap-1">
-                      <Database className="w-3 h-3" /> Forensic Data Backup
-                    </span>
-                    <span>+$75.00</span>
-                  </motion.div>
-                )}
-
-                <div className="flex justify-between text-xs font-bold">
-                  <span className="text-slate-400 uppercase tracking-widest">Laboratory Overhead</span>
-                  <span>${quote.overhead.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-xs font-bold pt-3 border-t border-slate-800">
-                  <span className="text-slate-400 uppercase tracking-widest">Subtotal</span>
-                  <span>${quote.subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-xs font-bold text-emerald-400">
-                  <span className="uppercase tracking-widest">Sales Tax (Spokane)</span>
-                  <span>${quote.tax.toFixed(2)}</span>
-                </div>
+              <div className="space-y-4 relative z-10">
+                <h4 className="font-bold">Restoration Estimate</h4>
+                <CustomerQuoteSummary state={quoteState} />
               </div>
 
               <button className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-900/20 active:scale-95 transition-all flex items-center justify-center gap-2 group relative z-10">
@@ -412,7 +205,7 @@ export default function RepairEstimateCalculator() {
                 <h5 className="font-bold text-slate-900 text-sm">Transparency Protocol</h5>
               </div>
               <p className="text-[10px] font-medium text-slate-500 leading-relaxed">
-                Estimates provided are base-tier calculations. Final billing may fluctuate based on parts provenance and real-time telemetry findings during Phase 2 (Diagnostic Triage). 
+                Estimates use confirmed server pricing, before sales tax. Final billing may fluctuate based on parts provenance and real-time telemetry findings during Phase 2 (Diagnostic Triage).
                 <br /><br />
                 <span className="font-bold text-slate-900">WA RCW 19.415 Compliant Laboratory Pricing.</span>
               </p>
