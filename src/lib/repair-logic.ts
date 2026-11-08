@@ -14,10 +14,15 @@ export const WA_TAX_DATA: Record<string, { city: string; rate: number }> = {
   "98660": { city: "Vancouver", rate: 0.087 },
 };
 
-export function calculateQuoteInternal(issueType: string, deviceTier: string) {
-  const HOURLY_LABOR_RATE = 50;
-  const OVERHEAD_MARGIN = 0.8;
+import { repairPriceFromPartCost } from './pricing';
 
+/**
+ * Server-only illustrative estimator for the storefront /api/generate-quote.
+ * Uses the ONE V4 rule from ./pricing: ceil(part cost x 1.8 + $75 labor).
+ * Part (wholesale) costs below never leave this module: only the customer
+ * price (`subtotal`) is returned.
+ */
+export function calculateQuoteInternal(issueType: string, deviceTier: string) {
   const getPartsCost = (quality: "budget" | "pro" | "auth") => {
     if (issueType === "screen") {
       if (quality === "auth") return deviceTier === "flagship" ? 220 : 180;
@@ -30,24 +35,7 @@ export function calculateQuoteInternal(issueType: string, deviceTier: string) {
     }
     return 30;
   };
-
-  const getLaborHours = () => {
-    if (issueType === "screen") return deviceTier === "flagship" ? 1.5 : 1.0;
-    if (issueType === "battery") return 0.75;
-    return 1.0;
-  };
-
-  const calculateTier = (quality: "budget" | "pro" | "auth") => {
-    const parts = getPartsCost(quality);
-    const labor = getLaborHours() * HOURLY_LABOR_RATE;
-    const subtotal = (parts + labor) * (1 + OVERHEAD_MARGIN);
-    return {
-      partsCost: Math.round(parts * 100) / 100,
-      laborCost: Math.round(labor * 100) / 100,
-      subtotal: Math.round(subtotal * 100) / 100,
-    };
-  };
-
+  const calculateTier = (quality: "budget" | "pro" | "auth") => ({ subtotal: repairPriceFromPartCost(getPartsCost(quality)) });
   return {
     budget: calculateTier("budget"),
     professional: calculateTier("pro"),
