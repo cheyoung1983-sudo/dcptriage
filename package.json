@@ -13,7 +13,10 @@
     "postinstall": "prisma generate && node scripts/patch-next.cjs",
     "start": "next start",
     "lint": "tsc --noEmit",
-    "clean": "rm -rf .next out"
+    "clean": "rm -rf .next out",
+    "check-secrets": "node scripts/check-secrets.mjs",
+    "prepare": "simple-git-hooks || true",
+    "test": "jest"
   },
   "dependencies": {
     "@aws-sdk/cloudfront-signer": "^3.1161.0",
@@ -44,14 +47,21 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.6.2",
     "jest": "^30.5.2",
+    "jest-environment-jsdom": "^30.5.2",
     "postcss": "^8.4.47",
     "prisma": "7.10.1",
+    "simple-git-hooks": "^2.14.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.5.0"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "node scripts/check-secrets.mjs --staged"
   }
 }
